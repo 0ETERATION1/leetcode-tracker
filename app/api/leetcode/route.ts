@@ -6,8 +6,6 @@ interface LeetCodeSubmission {
   title: string;
   titleSlug: string;
   timestamp: string;
-  statusDisplay: string;
-  lang: string;
 }
 
 export async function GET(request: Request) {
@@ -21,106 +19,70 @@ export async function GET(request: Request) {
     );
   }
 
-  // GraphQL query using submissionList with pagination
   const query = `
-    query submissionList($username: String!, $offset: Int!, $limit: Int!) {
-      submissionList(username: $username, offset: $offset, limit: $limit) {
-        hasNext
-        submissions {
-          id
-          title
-          titleSlug
-          timestamp
-          statusDisplay
-          lang
-        }
+    query recentAcSubmissionList($username: String!) {
+      recentAcSubmissionList(username: $username, limit: 20) {
+        id
+        title
+        titleSlug
+        timestamp
       }
     }
   `;
 
   try {
-    console.log('Fetching submissions for', username);
-
-    let allSubmissions: LeetCodeSubmission[] = [];
-    let offset = 0;
-    const limit = 20; // Default page size
-    let hasNext = true;
-
-    // Pagination loop
-    while (hasNext) {
-      console.log(`Fetching submissions with offset ${offset}`);
-
-      const response = await axios.post(
-        'https://leetcode.com/graphql',
-        {
-          query,
-          variables: { username, offset, limit },
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
+    console.log('Fetching LeetCode data for:', username);
+    
+    const response = await axios.post(
+      'https://leetcode.com/graphql',
+      {
+        query,
+        variables: { username }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-      );
-
-      const data = response.data;
-      if (data.errors) {
-        throw new Error(JSON.stringify(data.errors));
       }
-
-      const submissionList = data.data.submissionList;
-      if (submissionList) {
-        const submissions = submissionList.submissions;
-        allSubmissions = allSubmissions.concat(submissions);
-        hasNext = submissionList.hasNext;
-        offset += limit;
-
-        // Optional delay to respect rate limits
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      } else {
-        hasNext = false;
-      }
-    }
-
-    console.log(`Total submissions fetched: ${allSubmissions.length}`);
-
-    // Filter submissions from the desired date onwards
-    const startOfDesiredDate = Math.floor(new Date('2025-01-01').getTime() / 1000);
-    const filteredSubmissions = allSubmissions.filter(
-      (submission) => parseInt(submission.timestamp) >= startOfDesiredDate
     );
 
-    console.log(`Filtered submissions from 2025 onwards: ${filteredSubmissions.length}`);
+    if (response.data.errors) {
+      console.error('GraphQL Errors:', response.data.errors);
+      return NextResponse.json(
+        { error: 'GraphQL query failed', details: response.data.errors },
+        { status: 500 }
+      );
+    }
 
-    // Store submissions in MongoDB (already handles duplicates)
+    const submissions = response.data.data.recentAcSubmissionList as LeetCodeSubmission[];
+    console.log(`Found ${submissions.length} submissions`);
+
+    // Store in MongoDB
     const mongoRes = await fetch(new URL('/api/submissions', request.url).toString(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ submissions: filteredSubmissions }),
+      body: JSON.stringify({ submissions }),
     });
 
     if (!mongoRes.ok) {
-      throw new Error('Failed to store submissions');
+      throw new Error('Failed to store submissions in MongoDB');
     }
 
     return NextResponse.json({
-      submissions: filteredSubmissions,
-      stats: {
-        total: filteredSubmissions.length,
-        dateRange: filteredSubmissions.length > 0
-          ? {
-              from: new Date(parseInt(filteredSubmissions[filteredSubmissions.length - 1].timestamp) * 1000).toISOString(),
-              to: new Date(parseInt(filteredSubmissions[0].timestamp) * 1000).toISOString(),
-            }
-          : null,
-      },
+      success: true,
+      submissions,
     });
-  } catch (error) {
-    console.error('Error fetching from LeetCode:', error);
+
+  } catch (error: unknown) {
+    console.error('LeetCode API Error:', error);
     return NextResponse.json(
-      { error: 'Error fetching submissions from LeetCode' },
+      { 
+        error: 'Error fetching from LeetCode',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
