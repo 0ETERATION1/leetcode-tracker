@@ -58,6 +58,8 @@ export default function Home() {
       const submissionsData = await submissionsRes.json();
       if (submissionsData.submissions) {
         setSubmissions(submissionsData.submissions);
+        // Update timestamp when submissions are successfully fetched
+        setLastUpdate(new Date());
       }
     } catch (error) {
       console.error("Error fetching submissions:", error);
@@ -76,8 +78,9 @@ export default function Home() {
       const data = await leetcodeRes.json();
       console.log("LeetCode response:", data);
 
+      // Set last update time immediately after successful fetch
       setLastUpdate(new Date());
-      console.log("Data refresh complete");
+      console.log("Data refresh complete, timestamp updated");
 
       // Fetch submissions after fetching new data
       await fetchSubmissions();
@@ -88,9 +91,16 @@ export default function Home() {
     }
   }, [fetchSubmissions, username]);
 
-  // Initialize data on component mount
+  // Initialize data on component mount with immediate timestamp
   useEffect(() => {
-    resetAndFetch();
+    const initData = async () => {
+      await resetAndFetch();
+      // Set initial timestamp even if fetch fails
+      if (!lastUpdate) {
+        setLastUpdate(new Date());
+      }
+    };
+    initData();
   }, []);
 
   // Re-fetch submissions when dates change
