@@ -37,9 +37,7 @@ interface LeetCodeSubmission {
 export default function Home() {
   const [submissions, setSubmissions] = useState<LeetCodeSubmission[]>([]);
   const [startDate, setStartDate] = useState(
-    new Date(new Date().setDate(new Date().getDate() - 7))
-      .toISOString()
-      .split("T")[0]
+    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
   );
   const [endDate, setEndDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -47,10 +45,12 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchData() {
+      console.log("Fetching data with dates:", { startDate, endDate });
       const res = await fetch(
         `/api/submissions/fetch?startDate=${startDate}&endDate=${endDate}`
       );
       const data = await res.json();
+      console.log("Received data:", data);
       setSubmissions(data.submissions);
     }
     fetchData();
@@ -60,6 +60,8 @@ export default function Home() {
   const dates = submissions.map(
     (s) => new Date(s.timestamp * 1000).toISOString().split("T")[0]
   );
+  console.log("Processed dates:", dates);
+
   const submissionsPerDate = dates.reduce<Record<string, number>>(
     (acc, date) => {
       acc[date] = (acc[date] || 0) + 1;
@@ -67,6 +69,8 @@ export default function Home() {
     },
     {}
   );
+
+  console.log("Submissions per date:", submissionsPerDate);
 
   const chartData = {
     labels: Object.keys(submissionsPerDate),
