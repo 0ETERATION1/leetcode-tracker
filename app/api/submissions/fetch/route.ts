@@ -52,20 +52,21 @@ export async function GET(request: Request) {
           $lte: endTimestamp
         }
       })
-      .sort({ timestamp: 1 }) // Sort by timestamp ascending
+      .sort({ timestamp: -1 }) // Changed from 1 to -1 to sort descending
       .toArray();
 
-    console.log('Query results:', {
-      matchedCount: submissions.length,
-      dateRange: {
-        first: submissions[0] ? new Date(parseInt(submissions[0].timestamp) * 1000).toISOString() : 'none',
-        last: submissions[submissions.length - 1] 
-          ? new Date(parseInt(submissions[submissions.length - 1].timestamp) * 1000).toISOString() 
-          : 'none'
+    console.log(`Found ${submissions.length} submissions in date range`);
+
+    return NextResponse.json({ 
+      success: true,
+      submissions,
+      query: {
+        startDate,
+        endDate,
+        startTimestamp,
+        endTimestamp
       }
     });
-    
-    return NextResponse.json({ submissions });
   } catch (error) {
     console.error('Error retrieving submissions:', error);
     return NextResponse.json(
