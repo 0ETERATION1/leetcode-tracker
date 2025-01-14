@@ -77,7 +77,9 @@ export default function Home() {
   useEffect(() => {
     const initializeData = async () => {
       const startOf2025 = "2025-01-01";
-      const today = new Date().toISOString().split("T")[0];
+
+      // Get today's date in local time zone
+      const today = new Date().toLocaleDateString("en-CA"); // Format: YYYY-MM-DD
 
       setStartDate(startOf2025);
       setEndDate(today);
@@ -86,7 +88,7 @@ export default function Home() {
     };
 
     initializeData();
-  }, [resetAndFetch]); // Add resetAndFetch to dependencies
+  }, [resetAndFetch]);
 
   // Re-fetch submissions when dates change
   useEffect(() => {
