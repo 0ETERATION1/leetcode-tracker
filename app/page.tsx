@@ -62,6 +62,8 @@ export default function Home() {
       if (!leetcodeRes.ok) {
         throw new Error("Failed to fetch LeetCode data");
       }
+      const data = await leetcodeRes.json();
+      console.log("LeetCode response:", data);
 
       setLastUpdate(new Date());
       console.log("Data refresh complete");
@@ -77,9 +79,7 @@ export default function Home() {
   useEffect(() => {
     const initializeData = async () => {
       const startOf2025 = "2025-01-01";
-
-      // Get today's date in local time zone
-      const today = new Date().toLocaleDateString("en-CA"); // Format: YYYY-MM-DD
+      const today = new Date().toISOString().split("T")[0];
 
       setStartDate(startOf2025);
       setEndDate(today);
@@ -92,8 +92,10 @@ export default function Home() {
 
   // Re-fetch submissions when dates change
   useEffect(() => {
-    fetchSubmissions();
-  }, [fetchSubmissions]); // Add fetchSubmissions to dependencies
+    if (startDate && endDate) {
+      fetchSubmissions();
+    }
+  }, [fetchSubmissions, startDate, endDate]);
 
   // Calculate total time spent between start and end dates
   const totalTimeInMinutes = submissions.length * 30;
