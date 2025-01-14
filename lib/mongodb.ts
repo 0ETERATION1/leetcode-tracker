@@ -1,10 +1,15 @@
 import { MongoClient } from 'mongodb';
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Please add your MongoDB URI to .env.local');
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  // Instead of throwing an error, log a warning during build
+  console.warn(
+    "Please define the MONGODB_URI environment variable inside .env.local or Vercel environment variables"
+  );
 }
 
-const uri = process.env.MONGODB_URI;
+const uri = MONGODB_URI || "";
 const options = {};
 
 // Extend the NodeJS global type
