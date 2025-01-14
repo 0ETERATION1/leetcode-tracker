@@ -36,27 +36,38 @@ interface LeetCodeSubmission {
 
 export default function Home() {
   const [submissions, setSubmissions] = useState<LeetCodeSubmission[]>([]);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState("2025-01-01");
+  const [endDate, setEndDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const username = "terskinalex";
 
   // Define fetchSubmissions with useCallback
   const fetchSubmissions = useCallback(async () => {
     if (!startDate || !endDate) return;
-    console.log("Fetching submissions for date range:", { startDate, endDate });
-    const submissionsRes = await fetch(
-      `/api/submissions/fetch?startDate=${startDate}&endDate=${endDate}`
-    );
-    const submissionsData = await submissionsRes.json();
-    if (submissionsData.submissions) {
-      setSubmissions(submissionsData.submissions);
+    try {
+      console.log("Fetching submissions for date range:", {
+        startDate,
+        endDate,
+      });
+      const submissionsRes = await fetch(
+        `/api/submissions/fetch?startDate=${startDate}&endDate=${endDate}`
+      );
+      const submissionsData = await submissionsRes.json();
+      if (submissionsData.submissions) {
+        setSubmissions(submissionsData.submissions);
+      }
+    } catch (error) {
+      console.error("Error fetching submissions:", error);
     }
   }, [startDate, endDate]);
 
   // Define resetAndFetch with useCallback
   const resetAndFetch = useCallback(async () => {
     try {
+      setIsLoading(true);
       console.log("Fetching fresh data...");
       const leetcodeRes = await fetch(`/api/leetcode?username=${username}`);
       if (!leetcodeRes.ok) {
@@ -72,23 +83,15 @@ export default function Home() {
       await fetchSubmissions();
     } catch (error) {
       console.error("Error during reset and fetch:", error);
+    } finally {
+      setIsLoading(false);
     }
   }, [fetchSubmissions, username]);
 
   // Initialize data on component mount
   useEffect(() => {
-    const initializeData = async () => {
-      const startOf2025 = "2025-01-01";
-      const today = new Date().toISOString().split("T")[0];
-
-      setStartDate(startOf2025);
-      setEndDate(today);
-
-      await resetAndFetch();
-    };
-
-    initializeData();
-  }, [resetAndFetch]);
+    resetAndFetch();
+  }, []);
 
   // Re-fetch submissions when dates change
   useEffect(() => {
@@ -178,9 +181,10 @@ export default function Home() {
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">LeetCode Activity Tracker</h1>
 
-      {/* Last update time */}
+      {/* Last update time and loading state */}
       <div className="mb-4 text-sm text-gray-600">
         Last updated: {lastUpdate ? lastUpdate.toLocaleString() : "Never"}
+        {isLoading && " (Loading...)"}
       </div>
 
       {/* Date selection */}
@@ -192,6 +196,7 @@ export default function Home() {
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             className="px-3 py-2 border rounded"
+            disabled={isLoading}
           />
         </div>
         <div>
@@ -201,45 +206,65 @@ export default function Home() {
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             className="px-3 py-2 border rounded"
+            disabled={isLoading}
           />
         </div>
       </div>
 
-      {/* Total time spent summary */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-        <h2 className="text-lg font-semibold mb-2">Summary</h2>
-        <p>Total Problems Solved: {submissions.length}</p>
-        <p>
-          Total Time Spent: {hours} hours {minutes} minutes
-        </p>
-      </div>
+      {/* Loading state or content */}
+      {isLoading ? (
+        <div className="flex justify-center items-center p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      ) : (
+        <>
+          {/* Summary */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h2 className="text-lg font-semibold mb-2">Summary</h2>
+            <p>Total Problems Solved: {submissions.length}</p>
+            <p>
+              Total Time Spent: {hours} hours {minutes} minutes
+            </p>
+          </div>
 
-      {/* Chart */}
-      <div className="mb-8">
-        <Chart data={chartData} options={chartOptions} />
-      </div>
+          {/* Chart */}
+          {submissions.length > 0 ? (
+            <div className="mb-8">
+              <Chart data={chartData} options={chartOptions} />
+            </div>
+          ) : (
+            <div className="text-center p-4 bg-gray-50 rounded">
+              No submissions found for the selected date range
+            </div>
+          )}
 
-      {/* Submissions list */}
-      <h2 className="text-xl font-semibold mb-4">Specific Questions Solved:</h2>
-      <ul className="space-y-2">
-        {submissions &&
-          submissions.map((submission) => (
-            <li
-              key={submission.id}
-              className="flex justify-between items-center p-2 hover:bg-gray-50"
-            >
-              <div>
-                <span className="font-medium">{submission.title}</span>
-                <span className="text-gray-500 ml-2">
-                  {new Date(
-                    parseInt(submission.timestamp) * 1000
-                  ).toLocaleString()}
-                </span>
-              </div>
-              <span className="text-gray-600">Estimated time: 30 minutes</span>
-            </li>
-          ))}
-      </ul>
+          {/* Submissions list */}
+          <h2 className="text-xl font-semibold mb-4">
+            Specific Questions Solved:
+          </h2>
+          <ul className="space-y-2">
+            {submissions &&
+              submissions.map((submission) => (
+                <li
+                  key={submission.id}
+                  className="flex justify-between items-center p-2 hover:bg-gray-50"
+                >
+                  <div>
+                    <span className="font-medium">{submission.title}</span>
+                    <span className="text-gray-500 ml-2">
+                      {new Date(
+                        parseInt(submission.timestamp) * 1000
+                      ).toLocaleString()}
+                    </span>
+                  </div>
+                  <span className="text-gray-600">
+                    Estimated time: 30 minutes
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }
