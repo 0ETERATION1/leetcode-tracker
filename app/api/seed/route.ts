@@ -20,19 +20,19 @@ export async function POST() {
   const db = client.db('leetcode-tracker');
   const collection = db.collection<LeetCodeSubmission>('submissions');
 
-  // Create some test submissions for the last 7 days
+  // Create test submissions for Jan 1-14, 2023
   const testSubmissions: LeetCodeSubmission[] = [];
-  for (let i = 0; i < 7; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    
+  const startDate = new Date('2023-01-01');
+  const endDate = new Date('2023-01-14');
+
+  for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
     // Add 1-3 submissions per day
     const submissionsCount = Math.floor(Math.random() * 3) + 1;
     for (let j = 0; j < submissionsCount; j++) {
       testSubmissions.push({
-        id: `test-${i}-${j}`,
-        title: `Test Problem ${i + 1}`,
-        titleSlug: `test-problem-${i + 1}`,
+        id: `test-${date.toISOString()}-${j}`,
+        title: `Two Sum ${date.getDate()}`,
+        titleSlug: `two-sum-${date.getDate()}`,
         timestamp: Math.floor(date.getTime() / 1000)
       });
     }
